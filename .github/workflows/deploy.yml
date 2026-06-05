@@ -333,7 +333,11 @@ jobs:
           kubectl delete secret "$LOCK_NAME" -n "$LOCK_NS" >/dev/null 2>&1 || echo "Lock already gone"
 
   determine_playwright_branch:
-    if: ${{ github.event_name == 'push' && !startsWith(github.ref_name,'dependabot/')}}
+    needs: [check_deployment_clearance]
+    if: |
+      github.event_name == 'push' && 
+      !startsWith(github.ref_name,'dependabot/') &&
+      contains(needs.check_deployment_clearance.outputs.pr_labels, 'run-tests')
     runs-on: ubuntu-latest
     outputs:
       playwright_branch: ${{ steps.check_branch.outputs.playwright_branch }}
