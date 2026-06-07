@@ -47,6 +47,10 @@ on:
         description: "Decide whether databases should be recreated or not"
         default: false
         type: string
+      run_playwright:
+        required: false
+        default: false
+        type: boolean
     secrets:
       SPSH_DEV_KUBECONFIG:
         required: true
@@ -310,3 +314,37 @@ jobs:
           LOCK_NS="${{ inputs.namespace }}"
           echo "Releasing lock $LOCK_NAME in namespace $LOCK_NS ..."
           kubectl delete secret "$LOCK_NAME" -n "$LOCK_NS" >/dev/null 2>&1 || echo "Lock already gone"
+
+    determine_playwright_branch:
+      if: ${{ inputs.run_playwright }}
+      runs-on: ubuntu-latest
+      outputs:
+        playwright_branch: ${{ steps.check_branch.outputs.playwright_branch }}
+      steps:
+        - name: Check current branch
+          run: |
+            echo "Current branch: ${{ github.ref_name }}"
+        - name: Check if Playwright branch exists
+          id: check_branch
+          run: |
+            playwright_branch="${{ github.ref_name }}"
+            if git ls-remote --heads --exit-code https://github.com/dBildungsplattform/schulportal-testautomatisierung $playwright_branch &> /dev/null; then
+              echo "playwright_branch=$playwright_branch" >> $GITHUB_OUTPUT
+            else
+              echo "playwright_branch=main" >> $GITHUB_OUTPUT
+            fi
+            echo "Branch exists: $?"
+
+    run_playwright_tests:
+      needs:
+        - deployment
+        - determine_playwright_branch
+      if: ${{ inputs.run_playwright }}
+      uses: dBildungsplattform/schulportal-testautomatisierung/.github/workflows/run-playwright.yml@main
+      secrets: inherit
+      with:
+        frontendHostname: "${{ inputs.namespace }}.dev.spsh.dbildungsplattform.de"
+        playwright_branch: ${{ needs.determine_playwright_branch.outputs.playwright_branch || 'main' }}
+        namespace_to_use: "${{ inputs.namespace }}"
+        tag: 'dev'
+        browser: 'chromium'
