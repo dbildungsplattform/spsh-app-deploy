@@ -20,4 +20,4 @@ auth:
   psql_pass: ""
   psql_admin_user: ""
 job:
-  ttlSecondsAfterFinished: 120
+  ttlSecondsAfterFinished: 86400 #1d
