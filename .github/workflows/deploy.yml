@@ -132,8 +132,9 @@ jobs:
               [[ ${{ inputs.namespace }} =~ $regex ]]
               echo "${BASH_REMATCH[1]}"
             fi
+
       - name: checkout repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  #v6.0.3
         with:
           repository: 'dBildungsplattform/spsh-app-deploy'
           # comment this in to test changes of a branch in repo
@@ -147,6 +148,7 @@ jobs:
           mkdir /home/runner/.kube/
           echo "${{ secrets.SPSH_DEV_KUBECONFIG }}" > /home/runner/.kube/config
           chmod 600 /home/runner/.kube/config
+
       - name: Create Kubernetes namespace
         run: |
           kubectl create namespace ${{ inputs.namespace }} || true
@@ -163,7 +165,6 @@ jobs:
           
           while kubectl get secret "$LOCK_NAME" -n "$LOCK_NS" >/dev/null 2>&1; do
             echo "Lock exists – waiting $ELAPSED / $TIMEOUT_SECONDS seconds elapsed"
-            
             sleep $SLEEP_INTERVAL
             ELAPSED=$((ELAPSED + SLEEP_INTERVAL))
 
@@ -323,44 +324,11 @@ jobs:
             --set backend.ingress.tlsSecretName="schulportal-tls" \
             --wait \
             --timeout 360s
+
       - name: Release deploy lock
         if: always()
         run: |
           LOCK_NAME="deploy-lock-${{ inputs.namespace }}"
           LOCK_NS="${{ inputs.namespace }}"
-
           echo "Releasing lock $LOCK_NAME in namespace $LOCK_NS ..."
           kubectl delete secret "$LOCK_NAME" -n "$LOCK_NS" >/dev/null 2>&1 || echo "Lock already gone"
-
-  determine_playwright_branch:
-    if: ${{ github.event_name == 'push' && !startsWith(github.ref_name,'dependabot/')}}
-    runs-on: ubuntu-latest
-    outputs:
-      playwright_branch: ${{ steps.check_branch.outputs.playwright_branch }}
-    steps:
-      - name: Check current branch
-        run: |
-          echo "Current branch: ${{ github.ref_name }}"
-      - name: Check if Playwright branch exists
-        id: check_branch
-        run: |
-          playwright_branch="${{ github.ref_name }}"
-          if git ls-remote --heads --exit-code https://github.com/dBildungsplattform/schulportal-testautomatisierung $playwright_branch &> /dev/null; then
-            echo "playwright_branch=$playwright_branch" >> $GITHUB_OUTPUT
-          else
-            echo "playwright_branch=main" >> $GITHUB_OUTPUT
-          fi
-          echo "Branch exists: $?"
-
-  run_playwright_tests:
-    needs:
-      - deployment
-      - determine_playwright_branch
-    uses: dBildungsplattform/schulportal-testautomatisierung/.github/workflows/run-playwright.yml@main
-    secrets: inherit
-    with:
-      frontendHostname: "${{ inputs.namespace }}.dev.spsh.dbildungsplattform.de"
-      playwright_branch: ${{ needs.determine_playwright_branch.outputs.playwright_branch || 'main' }}
-      namespace_to_use: "${{ inputs.namespace }}"
-      tag: 'dev'
-      browser: 'chromium'
