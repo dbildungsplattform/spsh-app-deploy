@@ -20,3 +20,5 @@ auth:
   psql_host: ""
   psql_pass: ""
   psql_admin_user: ""
+job:
+  ttlSecondsAfterFinished: 120
