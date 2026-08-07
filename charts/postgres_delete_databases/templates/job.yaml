@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}
   namespace: {{ .Values.namespace }}
 spec:
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
   template:
     spec:
       containers:
