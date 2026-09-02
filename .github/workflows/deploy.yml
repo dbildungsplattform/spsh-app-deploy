@@ -56,30 +56,30 @@ permissions:
 
 jobs:
   find_dbildungs_iam_server_helm_chart_tag:
-    uses: dBildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
+    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
     with:
-      github_repository: "dBildungsplattform/helm-charts-registry"
+      github_repository: "dbildungsplattform/helm-charts-registry"
       branch: ${{ inputs.dbildungs_iam_server_branch }}
       chart_name: "dbildungs-iam-server"
 
   find_schulportal_client_helm_chart_tag:
-    uses: dBildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
+    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
     with:
-      github_repository: "dBildungsplattform/helm-charts-registry"
+      github_repository: "dbildungsplattform/helm-charts-registry"
       branch: ${{ inputs.schulportal_client_branch }}
       chart_name: "schulportal-client"
 
   find_dbildungs_iam_keycloak_helm_chart_tag:
-    uses: dBildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
+    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
     with:
-      github_repository: "dBildungsplattform/helm-charts-registry"
+      github_repository: "dbildungsplattform/helm-charts-registry"
       branch: ${{ inputs.dbildungs_iam_keycloak_branch }}
       chart_name: "dbildungs-iam-keycloak"
 
   find_389ds_ldap_helm_chart_tag:
-    uses: dBildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
+    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/find-helm-chart-by-ticket-or-main-in-registry.yml@7
     with:
-      github_repository: "dBildungsplattform/helm-charts-registry"
+      github_repository: "dbildungsplattform/helm-charts-registry"
       branch: ${{ inputs.port389ds_branch }}
       chart_name: "389ds"
       mainVersion: ""
@@ -136,7 +136,7 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  #v6.0.3
         with:
-          repository: 'dBildungsplattform/spsh-app-deploy'
+          repository: 'dbildungsplattform/spsh-app-deploy'
           # comment this in to test changes of a branch in repo
           # ref: "<branch_name>"
 
@@ -184,22 +184,22 @@ jobs:
 
       - name: Download dbildungs_iam_server Helm chart
         run: |
-          wget https://github.com/dBildungsplattform/helm-charts-registry/releases/download/${{ needs.find_dbildungs_iam_server_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_dbildungs_iam_server_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
+          wget https://github.com/dbildungsplattform/helm-charts-registry/releases/download/${{ needs.find_dbildungs_iam_server_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_dbildungs_iam_server_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
           tar -zxvf ${{ needs.find_dbildungs_iam_server_helm_chart_tag.outputs.helm_chart_tagname }}.tgz 
 
       - name: Download schulportal_client Helm chart
         run: |
-          wget https://github.com/dBildungsplattform/helm-charts-registry/releases/download/${{ needs.find_schulportal_client_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_schulportal_client_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
+          wget https://github.com/dbildungsplattform/helm-charts-registry/releases/download/${{ needs.find_schulportal_client_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_schulportal_client_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
           tar -zxvf ${{ needs.find_schulportal_client_helm_chart_tag.outputs.helm_chart_tagname }}.tgz 
 
       - name: Download dbildungs_iam_keycloak Helm chart
         run: |
-          wget https://github.com/dBildungsplattform/helm-charts-registry/releases/download/${{ needs.find_dbildungs_iam_keycloak_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_dbildungs_iam_keycloak_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
+          wget https://github.com/dbildungsplattform/helm-charts-registry/releases/download/${{ needs.find_dbildungs_iam_keycloak_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_dbildungs_iam_keycloak_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
           tar -zxvf ${{ needs.find_dbildungs_iam_keycloak_helm_chart_tag.outputs.helm_chart_tagname }}.tgz 
 
       - name: Download 389ds_ldap Helm chart
         run: |
-          wget https://github.com/dBildungsplattform/helm-charts-registry/releases/download/${{ needs.find_389ds_ldap_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_389ds_ldap_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
+          wget https://github.com/dbildungsplattform/helm-charts-registry/releases/download/${{ needs.find_389ds_ldap_helm_chart_tag.outputs.helm_chart_tagname }}/${{ needs.find_389ds_ldap_helm_chart_tag.outputs.helm_chart_tagname }}.tgz
           tar -zxvf ${{ needs.find_389ds_ldap_helm_chart_tag.outputs.helm_chart_tagname }}.tgz 
 
       # On branches the ticket number is used as image tag. To ensure the pods are restarted
