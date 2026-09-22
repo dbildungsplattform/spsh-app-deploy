@@ -75,27 +75,38 @@ jobs:
       keep_namespace: ${{ steps.check.outputs.keep_namespace }}
     env:
       GH_TOKEN: ${{ github.token }} # repos are public, no cross-repo PAT needed
+      # passed as env instead of interpolated into the script to avoid shell/command injection
+      TICKET: ${{ needs.create_ticket_nr_variable.outputs.ticket_nr }}
+      TRIGGERING_REPOSITORY: ${{ inputs.triggering_repository }}
     steps:
       - name: Check whether sibling repos still have a branch for this ticket
         id: check
         run: |
-          TICKET="${{ needs.create_ticket_nr_variable.outputs.ticket_nr }}"
-          SIBLING_REPOS=(
+          set -euo pipefail
+
+          # Every component repo that shares this ticket's namespace.
+          readonly SIBLING_REPOS=(
             "dbildungsplattform/dbildungs-iam-server"
             "dbildungsplattform/schulportal-client"
             "dbildungsplattform/dbildungs-iam-keycloak"
           )
-          KEEP_NAMESPACE="false"
-          for REPO in "${SIBLING_REPOS[@]}"; do
-            if [ "$REPO" = "${{ inputs.triggering_repository }}" ]; then
-              continue
-            fi
-            if gh api "repos/${REPO}/branches" --paginate -q '.[].name' | grep -qi "^${TICKET}$"; then
-              echo "Branch for ticket '${TICKET}' still exists in ${REPO} - keeping namespace ${{ inputs.namespace }} alive"
-              KEEP_NAMESPACE="true"
+
+          branch_exists() {
+            local repo="$1"
+            gh api "repos/${repo}/branches" --paginate -q '.[].name' | grep -qi "^${TICKET}$"
+          }
+
+          keep_namespace="false"
+          for repo in "${SIBLING_REPOS[@]}"; do
+            [[ "$repo" == "$TRIGGERING_REPOSITORY" ]] && continue
+
+            if branch_exists "$repo"; then
+              echo "Branch for ticket '${TICKET}' still exists in ${repo} - keeping namespace alive"
+              keep_namespace="true"
             fi
           done
-          echo "keep_namespace=${KEEP_NAMESPACE}" >> "$GITHUB_OUTPUT"
+
+          echo "keep_namespace=${keep_namespace}" >> "$GITHUB_OUTPUT"
 
   delete_databases_and_namespace:
     needs: 
