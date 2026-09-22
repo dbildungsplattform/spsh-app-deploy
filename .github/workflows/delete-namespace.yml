@@ -19,8 +19,6 @@ on:
     secrets:
       SPSH_DEV_KUBECONFIG:
         required: true
-      GH_CROSS_REPO_TOKEN:
-        required: true
 permissions:
   contents: read
 
@@ -76,7 +74,7 @@ jobs:
     outputs:
       keep_namespace: ${{ steps.check.outputs.keep_namespace }}
     env:
-      GH_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+      GH_TOKEN: ${{ github.token }} # repos are public, no cross-repo PAT needed
     steps:
       - name: Check whether sibling repos still have a branch for this ticket
         id: check

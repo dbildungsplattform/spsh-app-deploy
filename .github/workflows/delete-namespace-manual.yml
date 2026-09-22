@@ -28,7 +28,6 @@ jobs:
       force: true # manual dispatch is an explicit operator request, skip the sibling-branch check
     secrets:
       SPSH_DEV_KUBECONFIG: ${{ secrets.SPSH_DEV_KUBECONFIG }}
-      GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
   deletion_successful:
     needs:
