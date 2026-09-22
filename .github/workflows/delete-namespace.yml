@@ -7,8 +7,19 @@ on:
         required: true
         description: "Namespace has to start with ticketnr, e.g. spsh-1234"
         type: string
+      triggering_repository:
+        required: true
+        description: "Full name (owner/repo) of the repository whose branch deletion triggered this workflow"
+        type: string
+      force:
+        required: false
+        description: "Skip the sibling-branch check and delete the namespace unconditionally"
+        type: boolean
+        default: false
     secrets:
       SPSH_DEV_KUBECONFIG:
+        required: true
+      GH_CROSS_REPO_TOKEN:
         required: true
 permissions:
   contents: read
@@ -55,11 +66,48 @@ jobs:
           [[ ${{ inputs.namespace }} =~ $regex ]]
           echo "ticket_nr=$(echo ${BASH_REMATCH[1]} | tr [A-Z] [a-z])" >> $GITHUB_OUTPUT
 
+  # The namespace is shared by all component repos for the same ticket, so it must only be torn
+  # down once none of them still has an active branch for that ticket.
+  check_sibling_branches:
+    if: ${{ !inputs.force }}
+    needs:
+      - create_ticket_nr_variable
+    runs-on: ubuntu-latest
+    outputs:
+      keep_namespace: ${{ steps.check.outputs.keep_namespace }}
+    env:
+      GH_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
+    steps:
+      - name: Check whether sibling repos still have a branch for this ticket
+        id: check
+        run: |
+          TICKET="${{ needs.create_ticket_nr_variable.outputs.ticket_nr }}"
+          SIBLING_REPOS=(
+            "dbildungsplattform/dbildungs-iam-server"
+            "dbildungsplattform/schulportal-client"
+            "dbildungsplattform/dbildungs-iam-keycloak"
+          )
+          KEEP_NAMESPACE="false"
+          for REPO in "${SIBLING_REPOS[@]}"; do
+            if [ "$REPO" = "${{ inputs.triggering_repository }}" ]; then
+              continue
+            fi
+            if gh api "repos/${REPO}/branches" --paginate -q '.[].name' | grep -qi "^${TICKET}$"; then
+              echo "Branch for ticket '${TICKET}' still exists in ${REPO} - keeping namespace ${{ inputs.namespace }} alive"
+              KEEP_NAMESPACE="true"
+            fi
+          done
+          echo "keep_namespace=${KEEP_NAMESPACE}" >> "$GITHUB_OUTPUT"
+
   delete_databases_and_namespace:
     needs: 
       - recreate_dbildungs_iam_keycloak_db_name
       - recreate_dbildungs_iam_server_db_name
       - create_ticket_nr_variable
+      - check_sibling_branches
+    if: |
+      always() &&
+      (inputs.force || needs.check_sibling_branches.outputs.keep_namespace != 'true')
     runs-on: ubuntu-latest
     steps:
     - name: checkout repo

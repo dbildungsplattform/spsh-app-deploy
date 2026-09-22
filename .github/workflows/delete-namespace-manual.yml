@@ -24,8 +24,11 @@ jobs:
     uses: dbildungsplattform/spsh-app-deploy/.github/workflows/delete-namespace.yml@5
     with:
       namespace: ${{ github.event.inputs.namespace }}
+      triggering_repository: "manual-dispatch"
+      force: true # manual dispatch is an explicit operator request, skip the sibling-branch check
     secrets:
       SPSH_DEV_KUBECONFIG: ${{ secrets.SPSH_DEV_KUBECONFIG }}
+      GH_CROSS_REPO_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
 
   deletion_successful:
     needs:
