@@ -1,0 +1,73 @@
+name: Resolve Component Branches
+
+# For a given ticket, decides per component repo whether its branch still exists.
+# If it does, the ticket branch is used; if it was already merged & deleted, "main" is used instead.
+
+on:
+  workflow_call:
+    inputs:
+      ticket:
+        required: true
+        description: "Ticket identifier, e.g. spsh-4113 or main (see get-branch-meta.yml outputs.ticket)"
+        type: string
+      triggering_repository:
+        required: true
+        description: "Full name (owner/repo) of the repository that triggered this workflow"
+        type: string
+    outputs:
+      dbildungs_iam_server_branch:
+        description: "ticket if dbildungs-iam-server still has that branch, otherwise main"
+        value: ${{ jobs.resolve.outputs.dbildungs_iam_server_branch }}
+      schulportal_client_branch:
+        description: "ticket if schulportal-client still has that branch, otherwise main"
+        value: ${{ jobs.resolve.outputs.schulportal_client_branch }}
+      dbildungs_iam_keycloak_branch:
+        description: "ticket if dbildungs-iam-keycloak still has that branch, otherwise main"
+        value: ${{ jobs.resolve.outputs.dbildungs_iam_keycloak_branch }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      dbildungs_iam_server_branch: ${{ steps.resolve.outputs.dbildungs_iam_server_branch }}
+      schulportal_client_branch: ${{ steps.resolve.outputs.schulportal_client_branch }}
+      dbildungs_iam_keycloak_branch: ${{ steps.resolve.outputs.dbildungs_iam_keycloak_branch }}
+    env:
+      GH_TOKEN: ${{ github.token }} # repos are public, no cross-repo PAT needed
+      # passed as env instead of interpolated into the script to avoid shell/command injection
+      TICKET: ${{ inputs.ticket }}
+      TRIGGERING_REPOSITORY: ${{ inputs.triggering_repository }}
+    steps:
+      - name: Resolve branch to deploy for each component repo
+        id: resolve
+        run: |
+          set -euo pipefail
+
+          declare -A COMPONENT_REPOS=(
+            [dbildungs_iam_server_branch]="dbildungsplattform/dbildungs-iam-server"
+            [schulportal_client_branch]="dbildungsplattform/schulportal-client"
+            [dbildungs_iam_keycloak_branch]="dbildungsplattform/dbildungs-iam-keycloak"
+          )
+
+          branch_exists() {
+            local repo="$1"
+            gh api "repos/${repo}/branches" --paginate -q '.[].name' | grep -qi "^${TICKET}$"
+          }
+
+          for output_name in "${!COMPONENT_REPOS[@]}"; do
+            repo="${COMPONENT_REPOS[$output_name]}"
+
+            if [[ "$TICKET" == "main" ]]; then
+              branch="main"
+            elif [[ "$repo" == "$TRIGGERING_REPOSITORY" ]] || branch_exists "$repo"; then
+              branch="$TICKET"
+            else
+              echo "Branch for ticket '${TICKET}' no longer exists in ${repo} - falling back to main"
+              branch="main"
+            fi
+
+            echo "${output_name}=${branch}" >> "$GITHUB_OUTPUT"
+          done
