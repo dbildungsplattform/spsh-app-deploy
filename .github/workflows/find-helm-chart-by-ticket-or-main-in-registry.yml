@@ -53,18 +53,33 @@ jobs:
         run: |
           set -euo pipefail
 
-          requested_branch="$(printf '%s' "$REQUESTED_BRANCH" | tr '[:upper:]' '[:lower:]')"
-          resolved_branch="main"
+          is_valid_branch_identifier() {
+            [[ "$1" == "main" || "$1" =~ ^[[:alpha:]]+-[[:digit:]]+(-[[:digit:]]+)?$ ]]
+          }
 
-          if [[ "$requested_branch" != "main" && ! "$requested_branch" =~ ^[[:alpha:]]+-[[:digit:]]+(-[[:digit:]]+)?$ ]]; then
+          branch_exists_in_refs() {
+            local branch="$1"
+            local refs="$2"
+
+            grep -Eiq "[[:space:]]refs/heads/${branch}(-|$)" <<< "$refs"
+          }
+
+          requested_branch="$(printf '%s' "$REQUESTED_BRANCH" | tr '[:upper:]' '[:lower:]')"
+
+          if ! is_valid_branch_identifier "$requested_branch"; then
             echo "Invalid branch identifier '$REQUESTED_BRANCH'. Expected 'main' or a ticket such as 'spsh-1234'."
             exit 1
           fi
 
-          if [[ "$requested_branch" != "main" ]]; then
-            branch_refs="$(git ls-remote --heads "https://github.com/${SOURCE_REPOSITORY}.git" | cut -f2)"
+          resolved_branch="main"
 
-            if grep -Eiq "^refs/heads/${requested_branch}(-|$)" <<< "$branch_refs"; then
+          if [[ "$requested_branch" != "main" ]]; then
+            if ! branch_refs="$(git ls-remote --heads "https://github.com/${SOURCE_REPOSITORY}.git")"; then
+              echo "Failed to retrieve branches from '$SOURCE_REPOSITORY'."
+              exit 1
+            fi
+
+            if branch_exists_in_refs "$requested_branch" "$branch_refs"; then
               resolved_branch="$requested_branch"
               echo "Found a branch for '$requested_branch' in '$SOURCE_REPOSITORY'."
             else
