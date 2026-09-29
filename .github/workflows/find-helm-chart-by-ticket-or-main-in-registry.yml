@@ -7,6 +7,10 @@ on:
       github_repository:
         required: true
         type: string
+      source_repository:
+        required: true
+        description: "Repository in which the requested feature branch must exist"
+        type: string
       branch:
         required: true
         description: "Searchstring of the branch to "
@@ -40,24 +44,69 @@ jobs:
     outputs:
       helm_chart_tagname: ${{ steps.set_tagname_as_output.outputs.helm_chart_tagname }}
     steps:
+      - name: Resolve chart branch for ${{ inputs.chart_name }}
+        id: resolve_branch
+        shell: bash
+        env:
+          REQUESTED_BRANCH: ${{ inputs.branch }}
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+        run: |
+          set -euo pipefail
+
+          is_valid_branch_identifier() {
+            [[ "$1" == "main" || "$1" =~ ^[[:alpha:]]+-[[:digit:]]+(-[[:digit:]]+)?$ ]]
+          }
+
+          branch_exists_in_refs() {
+            local branch="$1"
+            local refs="$2"
+
+            grep -Eiq "[[:space:]]refs/heads/${branch}(-|$)" <<< "$refs"
+          }
+
+          requested_branch="$(printf '%s' "$REQUESTED_BRANCH" | tr '[:upper:]' '[:lower:]')"
+
+          if ! is_valid_branch_identifier "$requested_branch"; then
+            echo "Invalid branch identifier '$REQUESTED_BRANCH'. Expected 'main' or a ticket such as 'spsh-1234'."
+            exit 1
+          fi
+
+          resolved_branch="main"
+
+          if [[ "$requested_branch" != "main" ]]; then
+            if ! branch_refs="$(git ls-remote --heads "https://github.com/${SOURCE_REPOSITORY}.git")"; then
+              echo "Failed to retrieve branches from '$SOURCE_REPOSITORY'."
+              exit 1
+            fi
+
+            if branch_exists_in_refs "$requested_branch" "$branch_refs"; then
+              resolved_branch="$requested_branch"
+              echo "Found a branch for '$requested_branch' in '$SOURCE_REPOSITORY'."
+            else
+              echo "No branch for '$requested_branch' in '$SOURCE_REPOSITORY'; using main."
+            fi
+          fi
+
+          echo "branch=$resolved_branch" >> "$GITHUB_OUTPUT"
+
       - name: Search ${{ inputs.chart_name }} and get Helm Chart release by ticket name with releaseNameRegEx action
-        if: ${{ inputs.branch != 'main' }}
+        if: ${{ steps.resolve_branch.outputs.branch != 'main' }}
         id: getByReleaseNameRegEx
         uses: cardinalby/git-get-release-action@cedef2faf69cb7c55b285bad07688d04430b7ada  #1.2.4
         with:
-          releaseNameRegEx: "${{ inputs.chart_name }}-${{ inputs.version }}-${{ inputs.branch }}"
+          releaseNameRegEx: "${{ inputs.chart_name }}-${{ inputs.version }}-${{ steps.resolve_branch.outputs.branch }}"
           searchLimit: 1000
           doNotFailIfNotFound: 'true'
           repo: "${{ inputs.github_repository }}"
     
       - name: Set Branch Helm Chart tagname as variable for ${{ inputs.chart_name }}
-        if: ${{ steps.getByReleaseNameRegEx.outputs.tag_name != '' && inputs.branch != 'main' }}
+        if: ${{ steps.getByReleaseNameRegEx.outputs.tag_name != '' && steps.resolve_branch.outputs.branch != 'main' }}
         run: |
           echo "${{ steps.getByReleaseNameRegEx.outputs.tag_name }}"
-          echo "helm_chart_tagname=${{ steps.getByReleaseNameRegEx.outputs.tag_name }}" >> $GITHUB_ENV
+          echo "helm_chart_tagname=${{ steps.getByReleaseNameRegEx.outputs.tag_name }}" >> "$GITHUB_ENV"
       
       - name: Check if a Branch Helm Chart was found, if not, take last from main
-        if: ${{ steps.getByReleaseNameRegEx.outputs.tag_name == '' || inputs.branch == 'main'  }}
+        if: ${{ steps.getByReleaseNameRegEx.outputs.tag_name == '' || steps.resolve_branch.outputs.branch == 'main' }}
         id: getMainByReleaseNameRegEx
         uses: cardinalby/git-get-release-action@cedef2faf69cb7c55b285bad07688d04430b7ada #1.2.4
         with:
@@ -76,10 +125,10 @@ jobs:
         if: steps.getByReleaseNameRegEx.outputs.tag_name == '' 
         run: |
           echo "${{ steps.getMainByReleaseNameRegEx.outputs.tag_name }}"
-          echo "helm_chart_tagname=${{ steps.getMainByReleaseNameRegEx.outputs.tag_name }}" >> $GITHUB_ENV
+          echo "helm_chart_tagname=${{ steps.getMainByReleaseNameRegEx.outputs.tag_name }}" >> "$GITHUB_ENV"
       
       - name:  Set Helm Chart tagname as Output
         id: set_tagname_as_output
         run: |
           echo "$helm_chart_tagname"
-          echo "helm_chart_tagname=$helm_chart_tagname" >> $GITHUB_OUTPUT
+          echo "helm_chart_tagname=$helm_chart_tagname" >> "$GITHUB_OUTPUT"
