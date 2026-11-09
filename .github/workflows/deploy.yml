@@ -211,6 +211,7 @@ jobs:
       # We also need to uninstall all pods to savely recreate the database
       - name: Uninstall all Helm-Charts in the namespace
         run: |     
+          helm version
           # Get list of installed Helm-Charts in namespace 
           LIST_OF_HELM_CHARTS_IN_NAMESPACE="$(helm ls \
           --namespace ${{ inputs.namespace }} \
