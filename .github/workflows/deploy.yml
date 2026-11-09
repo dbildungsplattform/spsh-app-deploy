@@ -144,8 +144,13 @@ jobs:
           # comment this in to test changes of a branch in repo
           # ref: "<branch_name>"
 
-      - name: Set up kubectl and Helm
+      - name: Set up kubectl
         uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e7feb7f #v4.0.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 #v3.5
+        with:
+          version: v3.12.3
 
       - name: Set kubeconfig
         run: |
