@@ -21,7 +21,7 @@ jobs:
   delete_databases_and_namespace:
     needs: 
       - check_namespace_input
-    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/delete-namespace.yml@5
+    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/delete-namespace.yml@e6beb3f643d6906e354de09b6111e05b2e4c8761 # 9.0.2
     with:
       namespace: ${{ github.event.inputs.namespace }}
     secrets:
