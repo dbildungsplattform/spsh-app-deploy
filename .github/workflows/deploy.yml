@@ -290,6 +290,7 @@ jobs:
             --set ingress.ingressClassName="nginx-loadbalancerip" \
             --set ingress.tls=true \
             --set ingress.tlsSecretName="schulportal-tls" \
+            --set javaOpts="-XX:-UseBASE64Intrinsics" \
             --wait \
             --timeout 300s
 
