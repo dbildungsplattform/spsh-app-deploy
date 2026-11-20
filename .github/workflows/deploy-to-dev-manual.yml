@@ -48,7 +48,7 @@ on:
 
 jobs:
   create_branch_identifier:
-    uses: dbildungsplattform/spsh-app-deploy/.github/workflows/convert-branch-name.yml@7
+    uses: ./.github/workflows/convert-branch-name.yml
     with:
       branch: ${{ github.event.inputs.namespace }}
   
